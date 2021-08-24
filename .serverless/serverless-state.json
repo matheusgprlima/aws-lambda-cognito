@@ -1,0 +1,812 @@
+{
+  "service": {
+    "service": "http-api-node",
+    "serviceObject": {
+      "name": "http-api-node"
+    },
+    "provider": {
+      "name": "aws",
+      "runtime": "nodejs12.x",
+      "environment": {
+        "DOMAIN_SUFFIX": "mlima"
+      },
+      "httpApi": {
+        "authorizers": {
+          "serviceAuthorizer": {
+            "identitySource": "$request.header.Authorization",
+            "issuerUrl": {
+              "Fn::Join": [
+                "",
+                [
+                  "https://cognito-idp.",
+                  "us-east-1",
+                  ".amazonaws.com/",
+                  {
+                    "Ref": "serviceUserPool"
+                  }
+                ]
+              ]
+            },
+            "audience": [
+              {
+                "Ref": "serviceUserPoolClient"
+              }
+            ]
+          }
+        }
+      },
+      "stage": "dev",
+      "region": "us-east-1",
+      "versionFunctions": true,
+      "compiledCloudFormationTemplate": {
+        "AWSTemplateFormatVersion": "2010-09-09",
+        "Description": "The AWS CloudFormation template for this Serverless application",
+        "Resources": {
+          "ServerlessDeploymentBucket": {
+            "Type": "AWS::S3::Bucket",
+            "Properties": {
+              "BucketEncryption": {
+                "ServerSideEncryptionConfiguration": [
+                  {
+                    "ServerSideEncryptionByDefault": {
+                      "SSEAlgorithm": "AES256"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "ServerlessDeploymentBucketPolicy": {
+            "Type": "AWS::S3::BucketPolicy",
+            "Properties": {
+              "Bucket": {
+                "Ref": "ServerlessDeploymentBucket"
+              },
+              "PolicyDocument": {
+                "Statement": [
+                  {
+                    "Action": "s3:*",
+                    "Effect": "Deny",
+                    "Principal": "*",
+                    "Resource": [
+                      {
+                        "Fn::Join": [
+                          "",
+                          [
+                            "arn:",
+                            {
+                              "Ref": "AWS::Partition"
+                            },
+                            ":s3:::",
+                            {
+                              "Ref": "ServerlessDeploymentBucket"
+                            },
+                            "/*"
+                          ]
+                        ]
+                      },
+                      {
+                        "Fn::Join": [
+                          "",
+                          [
+                            "arn:",
+                            {
+                              "Ref": "AWS::Partition"
+                            },
+                            ":s3:::",
+                            {
+                              "Ref": "ServerlessDeploymentBucket"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "Condition": {
+                      "Bool": {
+                        "aws:SecureTransport": false
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "GetProfileInfoLogGroup": {
+            "Type": "AWS::Logs::LogGroup",
+            "Properties": {
+              "LogGroupName": "/aws/lambda/http-api-node-dev-getProfileInfo"
+            }
+          },
+          "CreateProfileInfoLogGroup": {
+            "Type": "AWS::Logs::LogGroup",
+            "Properties": {
+              "LogGroupName": "/aws/lambda/http-api-node-dev-createProfileInfo"
+            }
+          },
+          "IamRoleLambdaExecution": {
+            "Type": "AWS::IAM::Role",
+            "Properties": {
+              "AssumeRolePolicyDocument": {
+                "Version": "2012-10-17",
+                "Statement": [
+                  {
+                    "Effect": "Allow",
+                    "Principal": {
+                      "Service": [
+                        "lambda.amazonaws.com"
+                      ]
+                    },
+                    "Action": [
+                      "sts:AssumeRole"
+                    ]
+                  }
+                ]
+              },
+              "Policies": [
+                {
+                  "PolicyName": {
+                    "Fn::Join": [
+                      "-",
+                      [
+                        "http-api-node",
+                        "dev",
+                        "lambda"
+                      ]
+                    ]
+                  },
+                  "PolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                      {
+                        "Effect": "Allow",
+                        "Action": [
+                          "logs:CreateLogStream",
+                          "logs:CreateLogGroup"
+                        ],
+                        "Resource": [
+                          {
+                            "Fn::Sub": "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/http-api-node-dev*:*"
+                          }
+                        ]
+                      },
+                      {
+                        "Effect": "Allow",
+                        "Action": [
+                          "logs:PutLogEvents"
+                        ],
+                        "Resource": [
+                          {
+                            "Fn::Sub": "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/http-api-node-dev*:*:*"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                }
+              ],
+              "Path": "/",
+              "RoleName": {
+                "Fn::Join": [
+                  "-",
+                  [
+                    "http-api-node",
+                    "dev",
+                    {
+                      "Ref": "AWS::Region"
+                    },
+                    "lambdaRole"
+                  ]
+                ]
+              }
+            }
+          },
+          "GetProfileInfoLambdaFunction": {
+            "Type": "AWS::Lambda::Function",
+            "Properties": {
+              "Code": {
+                "S3Bucket": {
+                  "Ref": "ServerlessDeploymentBucket"
+                },
+                "S3Key": "serverless/http-api-node/dev/1629766474265-2021-08-24T00:54:34.265Z/http-api-node.zip"
+              },
+              "Handler": "profile.get",
+              "Runtime": "nodejs12.x",
+              "FunctionName": "http-api-node-dev-getProfileInfo",
+              "MemorySize": 1024,
+              "Timeout": 6,
+              "Environment": {
+                "Variables": {
+                  "DOMAIN_SUFFIX": "mlima"
+                }
+              },
+              "Role": {
+                "Fn::GetAtt": [
+                  "IamRoleLambdaExecution",
+                  "Arn"
+                ]
+              }
+            },
+            "DependsOn": [
+              "GetProfileInfoLogGroup"
+            ]
+          },
+          "CreateProfileInfoLambdaFunction": {
+            "Type": "AWS::Lambda::Function",
+            "Properties": {
+              "Code": {
+                "S3Bucket": {
+                  "Ref": "ServerlessDeploymentBucket"
+                },
+                "S3Key": "serverless/http-api-node/dev/1629766474265-2021-08-24T00:54:34.265Z/http-api-node.zip"
+              },
+              "Handler": "profile.post",
+              "Runtime": "nodejs12.x",
+              "FunctionName": "http-api-node-dev-createProfileInfo",
+              "MemorySize": 1024,
+              "Timeout": 6,
+              "Environment": {
+                "Variables": {
+                  "DOMAIN_SUFFIX": "mlima"
+                }
+              },
+              "Role": {
+                "Fn::GetAtt": [
+                  "IamRoleLambdaExecution",
+                  "Arn"
+                ]
+              }
+            },
+            "DependsOn": [
+              "CreateProfileInfoLogGroup"
+            ]
+          },
+          "GetProfileInfoLambdaVersionFV31aBhxkAijMKqeVBtDnjW85z3v40NTWyrWuB7rA4": {
+            "Type": "AWS::Lambda::Version",
+            "DeletionPolicy": "Retain",
+            "Properties": {
+              "FunctionName": {
+                "Ref": "GetProfileInfoLambdaFunction"
+              },
+              "CodeSha256": "QNUebSHL42kG4ivigHCpMVSJRugd+hxjNSFm9guiMyw="
+            }
+          },
+          "CreateProfileInfoLambdaVersionwJYZ1GlIDlCaZJcZOVMUcTVAZZgmmT2B4vFDmnVW560": {
+            "Type": "AWS::Lambda::Version",
+            "DeletionPolicy": "Retain",
+            "Properties": {
+              "FunctionName": {
+                "Ref": "CreateProfileInfoLambdaFunction"
+              },
+              "CodeSha256": "QNUebSHL42kG4ivigHCpMVSJRugd+hxjNSFm9guiMyw="
+            }
+          },
+          "HttpApi": {
+            "Type": "AWS::ApiGatewayV2::Api",
+            "Properties": {
+              "Name": "dev-http-api-node",
+              "ProtocolType": "HTTP"
+            },
+            "DependsOn": [
+              "serviceUserPool"
+            ]
+          },
+          "HttpApiStage": {
+            "Type": "AWS::ApiGatewayV2::Stage",
+            "Properties": {
+              "ApiId": {
+                "Ref": "HttpApi"
+              },
+              "StageName": "$default",
+              "AutoDeploy": true,
+              "DefaultRouteSettings": {
+                "DetailedMetricsEnabled": false
+              }
+            }
+          },
+          "HttpApiAuthorizerServiceAuthorizer": {
+            "Type": "AWS::ApiGatewayV2::Authorizer",
+            "Properties": {
+              "ApiId": {
+                "Ref": "HttpApi"
+              },
+              "Name": "serviceAuthorizer",
+              "IdentitySource": [
+                "$request.header.Authorization"
+              ],
+              "AuthorizerType": "JWT",
+              "JwtConfiguration": {
+                "Audience": [
+                  {
+                    "$ref": "$[\"service\"][\"provider\"][\"httpApi\"][\"authorizers\"][\"serviceAuthorizer\"][\"audience\"][0]"
+                  }
+                ],
+                "Issuer": {
+                  "$ref": "$[\"service\"][\"provider\"][\"httpApi\"][\"authorizers\"][\"serviceAuthorizer\"][\"issuerUrl\"]"
+                }
+              }
+            }
+          },
+          "GetProfileInfoLambdaPermissionHttpApi": {
+            "Type": "AWS::Lambda::Permission",
+            "Properties": {
+              "FunctionName": {
+                "Fn::GetAtt": [
+                  "GetProfileInfoLambdaFunction",
+                  "Arn"
+                ]
+              },
+              "Action": "lambda:InvokeFunction",
+              "Principal": "apigateway.amazonaws.com",
+              "SourceArn": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:",
+                    {
+                      "Ref": "AWS::Partition"
+                    },
+                    ":execute-api:",
+                    {
+                      "Ref": "AWS::Region"
+                    },
+                    ":",
+                    {
+                      "Ref": "AWS::AccountId"
+                    },
+                    ":",
+                    {
+                      "Ref": "HttpApi"
+                    },
+                    "/*"
+                  ]
+                ]
+              }
+            }
+          },
+          "HttpApiIntegrationGetProfileInfo": {
+            "Type": "AWS::ApiGatewayV2::Integration",
+            "Properties": {
+              "ApiId": {
+                "Ref": "HttpApi"
+              },
+              "IntegrationType": "AWS_PROXY",
+              "IntegrationUri": {
+                "$ref": "$[\"service\"][\"provider\"][\"compiledCloudFormationTemplate\"][\"Resources\"][\"GetProfileInfoLambdaPermissionHttpApi\"][\"Properties\"][\"FunctionName\"]"
+              },
+              "PayloadFormatVersion": "2.0",
+              "TimeoutInMillis": 6500
+            }
+          },
+          "HttpApiRouteGetUserProfile": {
+            "Type": "AWS::ApiGatewayV2::Route",
+            "Properties": {
+              "ApiId": {
+                "Ref": "HttpApi"
+              },
+              "RouteKey": "GET /user/profile",
+              "Target": {
+                "Fn::Join": [
+                  "/",
+                  [
+                    "integrations",
+                    {
+                      "Ref": "HttpApiIntegrationGetProfileInfo"
+                    }
+                  ]
+                ]
+              },
+              "AuthorizationType": "JWT",
+              "AuthorizerId": {
+                "Ref": "HttpApiAuthorizerServiceAuthorizer"
+              }
+            },
+            "DependsOn": "HttpApiIntegrationGetProfileInfo"
+          },
+          "CreateProfileInfoLambdaPermissionHttpApi": {
+            "Type": "AWS::Lambda::Permission",
+            "Properties": {
+              "FunctionName": {
+                "Fn::GetAtt": [
+                  "CreateProfileInfoLambdaFunction",
+                  "Arn"
+                ]
+              },
+              "Action": "lambda:InvokeFunction",
+              "Principal": "apigateway.amazonaws.com",
+              "SourceArn": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:",
+                    {
+                      "Ref": "AWS::Partition"
+                    },
+                    ":execute-api:",
+                    {
+                      "Ref": "AWS::Region"
+                    },
+                    ":",
+                    {
+                      "Ref": "AWS::AccountId"
+                    },
+                    ":",
+                    {
+                      "Ref": "HttpApi"
+                    },
+                    "/*"
+                  ]
+                ]
+              }
+            }
+          },
+          "HttpApiIntegrationCreateProfileInfo": {
+            "Type": "AWS::ApiGatewayV2::Integration",
+            "Properties": {
+              "ApiId": {
+                "Ref": "HttpApi"
+              },
+              "IntegrationType": "AWS_PROXY",
+              "IntegrationUri": {
+                "$ref": "$[\"service\"][\"provider\"][\"compiledCloudFormationTemplate\"][\"Resources\"][\"CreateProfileInfoLambdaPermissionHttpApi\"][\"Properties\"][\"FunctionName\"]"
+              },
+              "PayloadFormatVersion": "2.0",
+              "TimeoutInMillis": 6500
+            }
+          },
+          "HttpApiRoutePostUserProfile": {
+            "Type": "AWS::ApiGatewayV2::Route",
+            "Properties": {
+              "ApiId": {
+                "Ref": "HttpApi"
+              },
+              "RouteKey": "POST /user/profile",
+              "Target": {
+                "Fn::Join": [
+                  "/",
+                  [
+                    "integrations",
+                    {
+                      "Ref": "HttpApiIntegrationCreateProfileInfo"
+                    }
+                  ]
+                ]
+              },
+              "AuthorizationType": "JWT",
+              "AuthorizerId": {
+                "Ref": "HttpApiAuthorizerServiceAuthorizer"
+              }
+            },
+            "DependsOn": "HttpApiIntegrationCreateProfileInfo"
+          },
+          "serviceUserPool": {
+            "Type": "AWS::Cognito::UserPool",
+            "Properties": {
+              "UserPoolName": "service-user-pool-dev",
+              "UsernameAttributes": [
+                "email"
+              ],
+              "AutoVerifiedAttributes": [
+                "email"
+              ]
+            }
+          },
+          "serviceUserPoolClient": {
+            "Type": "AWS::Cognito::UserPoolClient",
+            "Properties": {
+              "ClientName": "service-user-pool-client-dev",
+              "AllowedOAuthFlows": [
+                "implicit"
+              ],
+              "AllowedOAuthFlowsUserPoolClient": true,
+              "AllowedOAuthScopes": [
+                "phone",
+                "email",
+                "openid",
+                "profile",
+                "aws.cognito.signin.user.admin"
+              ],
+              "UserPoolId": {
+                "Ref": "serviceUserPool"
+              },
+              "CallbackURLs": [
+                "https://localhost:3000"
+              ],
+              "ExplicitAuthFlows": [
+                "ALLOW_USER_SRP_AUTH",
+                "ALLOW_REFRESH_TOKEN_AUTH"
+              ],
+              "GenerateSecret": false,
+              "SupportedIdentityProviders": [
+                "COGNITO"
+              ]
+            }
+          },
+          "serviceUserPoolDomain": {
+            "Type": "AWS::Cognito::UserPoolDomain",
+            "Properties": {
+              "UserPoolId": {
+                "Ref": "serviceUserPool"
+              },
+              "Domain": "service-user-pool-domain-dev-mlima"
+            }
+          }
+        },
+        "Outputs": {
+          "ServerlessDeploymentBucketName": {
+            "Value": {
+              "Ref": "ServerlessDeploymentBucket"
+            },
+            "Export": {
+              "Name": "sls-http-api-node-dev-ServerlessDeploymentBucketName"
+            }
+          },
+          "GetProfileInfoLambdaFunctionQualifiedArn": {
+            "Description": "Current Lambda function version",
+            "Value": {
+              "Ref": "GetProfileInfoLambdaVersionFV31aBhxkAijMKqeVBtDnjW85z3v40NTWyrWuB7rA4"
+            },
+            "Export": {
+              "Name": "sls-http-api-node-dev-GetProfileInfoLambdaFunctionQualifiedArn"
+            }
+          },
+          "CreateProfileInfoLambdaFunctionQualifiedArn": {
+            "Description": "Current Lambda function version",
+            "Value": {
+              "Ref": "CreateProfileInfoLambdaVersionwJYZ1GlIDlCaZJcZOVMUcTVAZZgmmT2B4vFDmnVW560"
+            },
+            "Export": {
+              "Name": "sls-http-api-node-dev-CreateProfileInfoLambdaFunctionQualifiedArn"
+            }
+          },
+          "HttpApiId": {
+            "Description": "Id of the HTTP API",
+            "Value": {
+              "Ref": "HttpApi"
+            },
+            "Export": {
+              "Name": "sls-http-api-node-dev-HttpApiId"
+            }
+          },
+          "HttpApiUrl": {
+            "Description": "URL of the HTTP API",
+            "Value": {
+              "Fn::Join": [
+                "",
+                [
+                  "https://",
+                  {
+                    "Ref": "HttpApi"
+                  },
+                  ".execute-api.",
+                  {
+                    "Ref": "AWS::Region"
+                  },
+                  ".",
+                  {
+                    "Ref": "AWS::URLSuffix"
+                  }
+                ]
+              ]
+            },
+            "Export": {
+              "Name": "sls-http-api-node-dev-HttpApiUrl"
+            }
+          }
+        }
+      },
+      "coreCloudFormationTemplate": {
+        "AWSTemplateFormatVersion": "2010-09-09",
+        "Description": "The AWS CloudFormation template for this Serverless application",
+        "Resources": {
+          "ServerlessDeploymentBucket": {
+            "Type": "AWS::S3::Bucket",
+            "Properties": {
+              "BucketEncryption": {
+                "ServerSideEncryptionConfiguration": [
+                  {
+                    "ServerSideEncryptionByDefault": {
+                      "SSEAlgorithm": "AES256"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "ServerlessDeploymentBucketPolicy": {
+            "Type": "AWS::S3::BucketPolicy",
+            "Properties": {
+              "Bucket": {
+                "Ref": "ServerlessDeploymentBucket"
+              },
+              "PolicyDocument": {
+                "Statement": [
+                  {
+                    "Action": "s3:*",
+                    "Effect": "Deny",
+                    "Principal": "*",
+                    "Resource": [
+                      {
+                        "Fn::Join": [
+                          "",
+                          [
+                            "arn:",
+                            {
+                              "Ref": "AWS::Partition"
+                            },
+                            ":s3:::",
+                            {
+                              "Ref": "ServerlessDeploymentBucket"
+                            },
+                            "/*"
+                          ]
+                        ]
+                      },
+                      {
+                        "Fn::Join": [
+                          "",
+                          [
+                            "arn:",
+                            {
+                              "Ref": "AWS::Partition"
+                            },
+                            ":s3:::",
+                            {
+                              "Ref": "ServerlessDeploymentBucket"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "Condition": {
+                      "Bool": {
+                        "aws:SecureTransport": false
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "Outputs": {
+          "ServerlessDeploymentBucketName": {
+            "Value": {
+              "Ref": "ServerlessDeploymentBucket"
+            }
+          }
+        }
+      },
+      "vpc": {}
+    },
+    "pluginsData": {},
+    "functions": {
+      "getProfileInfo": {
+        "handler": "profile.get",
+        "events": [
+          {
+            "httpApi": {
+              "method": "GET",
+              "path": "/user/profile",
+              "authorizer": "serviceAuthorizer"
+            },
+            "resolvedMethod": "GET",
+            "resolvedPath": "/user/profile"
+          }
+        ],
+        "name": "http-api-node-dev-getProfileInfo",
+        "package": {},
+        "memory": 1024,
+        "timeout": 6,
+        "runtime": "nodejs12.x",
+        "vpc": {},
+        "versionLogicalId": "GetProfileInfoLambdaVersionFV31aBhxkAijMKqeVBtDnjW85z3v40NTWyrWuB7rA4"
+      },
+      "createProfileInfo": {
+        "handler": "profile.post",
+        "events": [
+          {
+            "httpApi": {
+              "method": "POST",
+              "path": "/user/profile",
+              "authorizer": "serviceAuthorizer"
+            },
+            "resolvedMethod": "POST",
+            "resolvedPath": "/user/profile"
+          }
+        ],
+        "name": "http-api-node-dev-createProfileInfo",
+        "package": {},
+        "memory": 1024,
+        "timeout": 6,
+        "runtime": "nodejs12.x",
+        "vpc": {},
+        "versionLogicalId": "CreateProfileInfoLambdaVersionwJYZ1GlIDlCaZJcZOVMUcTVAZZgmmT2B4vFDmnVW560"
+      }
+    },
+    "resources": {
+      "Resources": {
+        "HttpApi": {
+          "DependsOn": [
+            "serviceUserPool"
+          ]
+        },
+        "serviceUserPool": {
+          "Type": "AWS::Cognito::UserPool",
+          "Properties": {
+            "UserPoolName": "service-user-pool-dev",
+            "UsernameAttributes": [
+              "email"
+            ],
+            "AutoVerifiedAttributes": [
+              "email"
+            ]
+          }
+        },
+        "serviceUserPoolClient": {
+          "Type": "AWS::Cognito::UserPoolClient",
+          "Properties": {
+            "ClientName": "service-user-pool-client-dev",
+            "AllowedOAuthFlows": [
+              "implicit"
+            ],
+            "AllowedOAuthFlowsUserPoolClient": true,
+            "AllowedOAuthScopes": [
+              "phone",
+              "email",
+              "openid",
+              "profile",
+              "aws.cognito.signin.user.admin"
+            ],
+            "UserPoolId": {
+              "Ref": "serviceUserPool"
+            },
+            "CallbackURLs": [
+              "https://localhost:3000"
+            ],
+            "ExplicitAuthFlows": [
+              "ALLOW_USER_SRP_AUTH",
+              "ALLOW_REFRESH_TOKEN_AUTH"
+            ],
+            "GenerateSecret": false,
+            "SupportedIdentityProviders": [
+              "COGNITO"
+            ]
+          }
+        },
+        "serviceUserPoolDomain": {
+          "Type": "AWS::Cognito::UserPoolDomain",
+          "Properties": {
+            "UserPoolId": {
+              "Ref": "serviceUserPool"
+            },
+            "Domain": "service-user-pool-domain-dev-mlima"
+          }
+        }
+      },
+      "Outputs": {}
+    },
+    "configValidationMode": "warn",
+    "serviceFilename": "serverless.yml",
+    "initialServerlessConfig": {
+      "service": {
+        "$ref": "$[\"service\"][\"serviceObject\"]"
+      },
+      "provider": {
+        "$ref": "$[\"service\"][\"provider\"]"
+      },
+      "functions": {
+        "$ref": "$[\"service\"][\"functions\"]"
+      },
+      "resources": {
+        "$ref": "$[\"service\"][\"resources\"]"
+      }
+    },
+    "layers": {},
+    "isDashboardMonitoringPreconfigured": false,
+    "artifact": "/home/mlima/aws-http-api-node-cognito/.serverless/http-api-node.zip"
+  },
+  "package": {
+    "artifactDirectoryName": "serverless/http-api-node/dev/1629766474265-2021-08-24T00:54:34.265Z",
+    "artifact": "http-api-node.zip"
+  }
+}
